@@ -31,6 +31,7 @@ from pydantic import BaseModel
 from src import app
 from src.schemas import (
     AnalystFinding,
+    OptionsAnalysis,
     ResearchPlan,
     ResearchReport,
     RiskAssessment,
@@ -40,8 +41,11 @@ from src.skills import (
     get_balance_sheet,
     get_cash_flow_statement,
     get_company_facts,
+    get_fundamental_deep_dive,
     get_income_statement,
     get_insider_transactions,
+    get_options_chain,
+    get_technical_indicators,
     search_market_news,
     validate_ticker,
 )
@@ -263,6 +267,62 @@ async def _run_pipeline(query: str):
         "<50 = too uncertain to have strong conviction."
     )
 
+    # ── Options Strategist: fetch technicals + options + fundamentals in parallel ──
+    await emit("agent_start", "options_strategist", {"message": f"Analyzing options strategies for {plan.ticker}..."})
+
+    technicals, options_data, fundamentals = await asyncio.gather(
+        get_technical_indicators(plan.ticker, "6mo"),
+        get_options_chain(plan.ticker, weeks_out=6),
+        get_fundamental_deep_dive(plan.ticker),
+    )
+
+    await emit("agent_note", "options_strategist", {
+        "message": f"Technical data loaded — RSI: {technicals.get('rsi_14', 'N/A')}, "
+                   f"Options expirations: {len(options_data.get('near_term_chains', []))}, "
+                   f"Moat: {fundamentals.get('moat_strength', 'N/A')}"
+    })
+
+    async def run_options_strategist():
+        analysis: OptionsAnalysis = await app.ai(
+            system=(
+                "You are an expert options strategist at a quantitative hedge fund. "
+                "You combine technical analysis (moving averages, RSI, MACD, Bollinger Bands, ATR, volume) "
+                "with fundamental analysis (moat, patents/R&D, catalysts, floor-to-ceiling valuation) "
+                "to recommend specific options strategies. "
+                "First, populate reasoning_steps with your analysis process. "
+                "Evaluate these strategies and recommend 2-4 that best fit the setup:\n"
+                "  - Short-term option calls (directional bullish bets)\n"
+                "  - Debit spreads (defined-risk directional plays)\n"
+                "  - Cash-secured puts (income + entry at discount)\n"
+                "  - Straddles (volatility plays around catalysts)\n"
+                "  - Strangles (cheaper volatility plays with wider strikes)\n\n"
+                "For each strategy, specify exact strikes and expirations from the options chain data. "
+                "Use ATR for position sizing guidance. Use the floor price as put strike guidance "
+                "and ceiling price for call target levels. "
+                "Be specific with dollar amounts for max profit, max loss, and breakevens."
+            ),
+            user=(
+                f"Ticker: {plan.ticker} ({plan.company_name})\n\n"
+                f"=== TECHNICAL INDICATORS ===\n{_json(technicals)}\n\n"
+                f"=== OPTIONS CHAIN DATA ===\n{_json(options_data)}\n\n"
+                f"=== FUNDAMENTAL DEEP DIVE ===\n{_json(fundamentals)}\n\n"
+                f"=== ANALYST FINDING (BULL) ===\n{_json(analyst_finding)}\n\n"
+                f"=== RISK ASSESSMENT (BEAR) ===\n{_json(risk_assessment)}\n\n"
+                "Produce an OptionsAnalysis with 2-4 strategies. "
+                "Rank strategies by confidence. Use real strikes and expirations from the chain data."
+            ),
+            schema=OptionsAnalysis,
+        )
+        await emit("agent_complete", "options_strategist", {
+            "technical_bias": analysis.technical_bias,
+            "fundamental_bias": analysis.fundamental_bias,
+            "iv_assessment": analysis.iv_assessment,
+            "strategies_count": len(analysis.strategies),
+            "top_strategy": analysis.strategies[0].strategy_name if analysis.strategies else "none",
+            "reasoning_steps": analysis.reasoning_steps,
+        })
+        return analysis
+
     await emit("agent_start", "editor_short", {"message": "Synthesising short-term (1–6 month) case..."})
     await emit("agent_start", "editor_long",  {"message": "Synthesising long-term (1–5 year) case..."})
 
@@ -290,7 +350,6 @@ async def _run_pipeline(query: str):
                 "Synthesise a SHORT-TERM ResearchReport (time_horizon='short_term')."
             ),
             schema=ResearchReport,
-            model="nebius/openai/gpt-oss-20b",
         )
         await emit("agent_complete", "editor_short", {
             "summary": report.summary,
@@ -324,7 +383,6 @@ async def _run_pipeline(query: str):
                 "Synthesise a LONG-TERM ResearchReport (time_horizon='long_term')."
             ),
             schema=ResearchReport,
-            model="nebius/openai/gpt-oss-20b",
         )
         await emit("agent_complete", "editor_long", {
             "summary": report.summary,
@@ -334,11 +392,14 @@ async def _run_pipeline(query: str):
         })
         return report
 
-    short_report, long_report = await asyncio.gather(run_editor_short(), run_editor_long())
+    short_report, long_report, options_analysis = await asyncio.gather(
+        run_editor_short(), run_editor_long(), run_options_strategist()
+    )
 
     await emit("complete", "system", {
         "short_term": short_report.model_dump(),
         "long_term":  long_report.model_dump(),
+        "options":    options_analysis.model_dump(),
     })
 
 

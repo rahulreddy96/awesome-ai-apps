@@ -13,7 +13,7 @@ load_dotenv()
 app = Agent(
     node_id="argus-research-agent",
     # LiteLLM requires the provider prefix for Nebius Token Factory
-    ai_config=AIConfig(model="nebius/openai/gpt-oss-120b"),
+    ai_config=AIConfig(model="nebius/Qwen/Qwen3-30B-A3B"),
     # Disable cloud hub connection — we run fully local, no AgentField cloud needed.
     # Without this, AgentField endlessly retries WebSocket to localhost:8080 (HTTP 403).
     agentfield_server="",

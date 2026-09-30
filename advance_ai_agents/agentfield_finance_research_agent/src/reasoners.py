@@ -407,7 +407,6 @@ async def plan_research(query: str) -> DualResearchReport:
                 "Synthesise a SHORT-TERM ResearchReport (time_horizon='short_term')."
             ),
             schema=ResearchReport,
-            model="nebius/openai/gpt-oss-20b",
         )
         app.note(
             f"[editor_short] Short-term verdict: {report.verdict} ({report.confidence}%)",
@@ -437,7 +436,6 @@ async def plan_research(query: str) -> DualResearchReport:
                 "Synthesise a LONG-TERM ResearchReport (time_horizon='long_term')."
             ),
             schema=ResearchReport,
-            model="nebius/openai/gpt-oss-20b",
         )
         app.note(
             f"[editor_long] Long-term verdict: {report.verdict} ({report.confidence}%)",

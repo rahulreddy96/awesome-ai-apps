@@ -181,7 +181,7 @@
    /* ── Pipeline ── */
    .pipeline {
     display: grid;
-    grid-template-columns: repeat(5, 1fr);
+    grid-template-columns: repeat(6, 1fr);
     gap: 10px;
     margin-bottom: 44px;
     align-items: start;
@@ -205,6 +205,7 @@
     z-index: 2;
    }
    /* The two editors are both "after" contrarian — no arrow between editor_short and editor_long */
+   .agent-col[data-agent='options_strategist']::after,
    .agent-col[data-agent='editor_short']::after,
    .agent-col[data-agent='editor_long']::after {
     display: none;
@@ -262,6 +263,19 @@
     background: radial-gradient(
      circle at 50% 0%,
      var(--purple-glow) 0%,
+     transparent 70%
+    );
+   }
+
+   /* Options strategist uses yellow/gold accent */
+   .agent-col[data-agent='options_strategist'] .agent-card.working {
+    border-color: rgba(246, 224, 94, 0.5);
+    box-shadow: 0 0 20px var(--yellow-glow);
+   }
+   .agent-col[data-agent='options_strategist'] .agent-card::before {
+    background: radial-gradient(
+     circle at 50% 0%,
+     var(--yellow-glow) 0%,
      transparent 70%
     );
    }
@@ -520,6 +534,14 @@
    .tab-btn:last-child {
     border-radius: 0 14px 0 0;
    }
+   .tab-btn:not(:first-child):not(:last-child) {
+    border-right: none;
+   }
+   .tab-btn.options-tab.active {
+    color: var(--yellow);
+    border-color: rgba(246, 224, 94, 0.4) rgba(246, 224, 94, 0.4)
+     var(--surface2);
+   }
    .tab-btn.active {
     background: var(--surface2);
     color: var(--text);
@@ -757,6 +779,103 @@
     font-style: italic;
    }
 
+   /* ── Options strategy cards ── */
+   .strategy-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 18px;
+    margin-bottom: 12px;
+   }
+   .strategy-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+   }
+   .strategy-name {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+   }
+   .strategy-outlook {
+    font-family: var(--mono);
+    font-size: 10px;
+    padding: 3px 8px;
+    border-radius: 12px;
+    border: 1px solid;
+   }
+   .strategy-outlook.bullish { color: var(--green); border-color: var(--green); background: var(--green-glow); }
+   .strategy-outlook.bearish { color: var(--red); border-color: var(--red); background: var(--red-glow); }
+   .strategy-outlook.neutral { color: var(--text-dim); border-color: var(--text-dim); }
+   .strategy-outlook.volatile { color: var(--yellow); border-color: var(--yellow); background: var(--yellow-glow); }
+   .strategy-legs {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--blue);
+    margin-bottom: 10px;
+    line-height: 1.8;
+   }
+   .strategy-pnl {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 8px;
+    margin-bottom: 10px;
+   }
+   .pnl-item {
+    font-family: var(--mono);
+    font-size: 10px;
+   }
+   .pnl-label { color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.08em; }
+   .pnl-value { font-size: 12px; font-weight: 600; color: var(--text); margin-top: 2px; }
+   .strategy-rationale {
+    font-size: 12px;
+    color: var(--text-dim);
+    line-height: 1.7;
+    border-left: 2px solid var(--yellow);
+    padding-left: 12px;
+   }
+   .bias-row {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+   }
+   .bias-chip {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 6px 12px;
+    border-radius: 10px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+   }
+   .bias-chip .label { color: var(--text-dim); text-transform: uppercase; font-size: 9px; letter-spacing: 0.08em; }
+   .bias-chip .value { font-weight: 600; }
+   .bias-chip .value.bullish { color: var(--green); }
+   .bias-chip .value.bearish { color: var(--red); }
+   .bias-chip .value.neutral { color: var(--yellow); }
+   .valuation-range {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--mono);
+    font-size: 12px;
+    padding: 12px 16px;
+    background: var(--surface);
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    margin-bottom: 16px;
+   }
+   .val-floor { color: var(--red); }
+   .val-current { color: var(--blue); font-weight: 700; font-size: 14px; }
+   .val-ceiling { color: var(--green); }
+   .val-bar { flex: 1; height: 4px; background: linear-gradient(90deg, var(--red), var(--yellow), var(--green)); border-radius: 2px; }
+
    /* ── Spinner ── */
    .spinner {
     width: 15px;
@@ -774,12 +893,13 @@
    }
 
    /* ── Responsive ── */
-   @media (max-width: 900px) {
+   @media (max-width: 1100px) {
     .pipeline {
      grid-template-columns: repeat(3, 1fr);
     }
     .agent-col[data-agent='editor_long']::after,
-    .agent-col[data-agent='contrarian']::after {
+    .agent-col[data-agent='contrarian']::after,
+    .agent-col[data-agent='options_strategist']::after {
      display: none;
     }
    }
@@ -816,8 +936,7 @@
    <header class="header">
     <div class="logo">ARGUS</div>
     <div class="tagline">
-     Autonomous Investment Research · 5-Agent Committee · Works best with real,
-     actively traded tickers (e.g. AAPL, NVDA, TSLA)
+     Autonomous Investment Research · 6-Agent Committee · Options Strategies · Technical &amp; Fundamental Analysis
     </div>
    </header>
 
@@ -956,6 +1075,36 @@
      </div>
     </div>
 
+    <!-- Options Strategist -->
+    <div class="agent-col" data-agent="options_strategist">
+     <div class="agent-card" id="card-options_strategist">
+      <div class="agent-header">
+       <div class="agent-icon">📊</div>
+       <div>
+        <div class="agent-name">Options</div>
+        <div class="agent-role">Strategist</div>
+       </div>
+      </div>
+      <div class="status-badge idle" id="badge-options_strategist">
+       <div class="status-dot"></div>
+       Idle
+      </div>
+      <div class="agent-log" id="log-options_strategist">
+       <div class="log-line detail">Awaiting findings...</div>
+      </div>
+     </div>
+     <button
+      class="thoughts-toggle"
+      id="toggle-options_strategist"
+      onclick="userToggleDrawer('options_strategist')"
+     >
+      ↳ 0 thoughts
+     </button>
+     <div class="thought-drawer" id="drawer-options_strategist">
+      <div class="drawer-inner" id="thoughts-options_strategist"></div>
+     </div>
+    </div>
+
     <!-- Editor: Long Term -->
     <div class="agent-col" data-agent="editor_long">
      <div class="agent-card" id="card-editor_long">
@@ -1001,6 +1150,9 @@
      </button>
      <button class="tab-btn long-tab" id="tab-long" onclick="switchTab('long')">
       🏛️ Long Term · 1–5 Years
+     </button>
+     <button class="tab-btn options-tab" id="tab-options" onclick="switchTab('options')">
+      📊 Options Strategies
      </button>
     </div>
 
@@ -1105,6 +1257,40 @@
       </div>
      </div>
     </div>
+    <!-- Options Panel -->
+    <div class="tab-panel" id="panel-options">
+     <div class="report-card">
+      <div class="horizon-badge short" style="color:var(--yellow);border-color:var(--yellow);background:var(--yellow-glow)">📊 Options Strategy Analysis</div>
+
+      <div class="bias-row" id="opt-biases"></div>
+
+      <div>
+       <div class="section-label">Floor-to-Ceiling Valuation</div>
+       <div class="valuation-range" id="opt-valuation"></div>
+      </div>
+
+      <div>
+       <div class="section-label">Moat Assessment</div>
+       <div class="summary-text" id="opt-moat" style="border-left-color:var(--yellow)"></div>
+      </div>
+
+      <div>
+       <div class="section-label">IV Assessment</div>
+       <div class="summary-text" id="opt-iv" style="border-left-color:var(--purple)"></div>
+      </div>
+
+      <div>
+       <div class="section-label">Recommended Strategies</div>
+       <div id="opt-strategies"></div>
+      </div>
+
+      <div>
+       <div class="section-label">Risk Warnings</div>
+       <div class="risks-list" id="opt-risks"></div>
+      </div>
+     </div>
+    </div>
+
    </div>
    <!-- /report-section -->
   </div>
@@ -1115,6 +1301,7 @@
     'manager',
     'analyst',
     'contrarian',
+    'options_strategist',
     'editor_short',
     'editor_long',
    ];
@@ -1144,8 +1331,10 @@
    function switchTab(which) {
     el('tab-short').classList.toggle('active', which === 'short');
     el('tab-long').classList.toggle('active', which === 'long');
+    el('tab-options').classList.toggle('active', which === 'options');
     el('panel-short').classList.toggle('active', which === 'short');
     el('panel-long').classList.toggle('active', which === 'long');
+    el('panel-options').classList.toggle('active', which === 'options');
    }
 
    // ── Reset ─────────────────────────────────────────────────────────────────
@@ -1154,6 +1343,7 @@
      manager: 'Awaiting query...',
      analyst: 'Awaiting plan...',
      contrarian: 'Awaiting plan...',
+     options_strategist: 'Awaiting findings...',
      editor_short: 'Awaiting findings...',
      editor_long: 'Awaiting findings...',
     };
@@ -1286,6 +1476,10 @@
        appendLog(agent, `→ Risk severity: ${data.severity}`, 'result');
        appendLog(agent, `${data.risks?.length || 0} risks`, 'detail');
       },
+      options_strategist: () => {
+       appendLog(agent, `→ Bias: ${data.technical_bias}/${data.fundamental_bias}`, 'result');
+       appendLog(agent, `${data.strategies_count} strategies · Top: ${data.top_strategy}`, 'detail');
+      },
       editor_short: () =>
        appendLog(
         agent,
@@ -1364,9 +1558,69 @@
     });
    }
 
+   function populateOptions(data) {
+    if (!data) return;
+
+    const biasesEl = el('opt-biases');
+    biasesEl.innerHTML = `
+     <div class="bias-chip"><span class="label">Technical</span><span class="value ${data.technical_bias}">${data.technical_bias}</span></div>
+     <div class="bias-chip"><span class="label">Fundamental</span><span class="value ${data.fundamental_bias}">${data.fundamental_bias}</span></div>
+     <div class="bias-chip"><span class="label">IV</span><span class="value">${data.iv_assessment}</span></div>
+    `;
+
+    const valEl = el('opt-valuation');
+    const floor = data.floor_price ? `$${data.floor_price.toFixed(2)}` : 'N/A';
+    const current = data.current_price ? `$${data.current_price.toFixed(2)}` : 'N/A';
+    const ceiling = data.ceiling_price ? `$${data.ceiling_price.toFixed(2)}` : 'N/A';
+    valEl.innerHTML = `
+     <span class="val-floor">Floor: ${floor}</span>
+     <div class="val-bar"></div>
+     <span class="val-current">${current}</span>
+     <div class="val-bar"></div>
+     <span class="val-ceiling">Ceiling: ${ceiling}</span>
+    `;
+
+    el('opt-moat').textContent = data.moat_summary || '';
+    el('opt-iv').textContent = data.iv_assessment || '';
+
+    const stratEl = el('opt-strategies');
+    stratEl.innerHTML = '';
+    (data.strategies || []).forEach((s, i) => {
+     const name = s.strategy_name.replace(/_/g, ' ');
+     const card = document.createElement('div');
+     card.className = 'strategy-card';
+     card.innerHTML = `
+      <div class="strategy-header">
+       <span class="strategy-name">${i + 1}. ${name}</span>
+       <span class="strategy-outlook ${s.outlook}">${s.outlook}</span>
+      </div>
+      <div class="strategy-legs">${(s.legs || []).join('<br>')}</div>
+      <div class="strategy-pnl">
+       <div class="pnl-item"><div class="pnl-label">Max Profit</div><div class="pnl-value" style="color:var(--green)">${s.max_profit}</div></div>
+       <div class="pnl-item"><div class="pnl-label">Max Loss</div><div class="pnl-value" style="color:var(--red)">${s.max_loss}</div></div>
+       <div class="pnl-item"><div class="pnl-label">Breakeven</div><div class="pnl-value">${s.breakeven}</div></div>
+       <div class="pnl-item"><div class="pnl-label">Cost</div><div class="pnl-value">${s.net_debit_or_credit}</div></div>
+       <div class="pnl-item"><div class="pnl-label">Confidence</div><div class="pnl-value">${s.confidence}%</div></div>
+      </div>
+      <div class="strategy-rationale">${s.rationale}</div>
+     `;
+     stratEl.appendChild(card);
+    });
+
+    const risksEl = el('opt-risks');
+    risksEl.innerHTML = '';
+    (data.risk_warnings || []).forEach(r => {
+     const item = document.createElement('div');
+     item.className = 'risk-item';
+     item.textContent = r;
+     risksEl.appendChild(item);
+    });
+   }
+
    function renderReports(data) {
     if (data.short_term) populateReport('st', data.short_term);
     if (data.long_term) populateReport('lt', data.long_term);
+    if (data.options) populateOptions(data.options);
     el('report-section').style.display = 'block';
     setTimeout(
      () =>
