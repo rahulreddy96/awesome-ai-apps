@@ -34,7 +34,8 @@ import json
 from src import app
 from src.schemas import (
     AnalystFinding,
-    DualResearchReport,
+    FullResearchReport,
+    OptionsAnalysis,
     ResearchPlan,
     ResearchReport,
     RiskAssessment,
@@ -44,8 +45,11 @@ from src.skills import (
     get_balance_sheet,
     get_cash_flow_statement,
     get_company_facts,
+    get_fundamental_deep_dive,
     get_income_statement,
     get_insider_transactions,
+    get_options_chain,
+    get_technical_indicators,
     search_market_news,
     validate_ticker,
 )
@@ -251,7 +255,7 @@ async def conduct_research(plan: ResearchPlan) -> AnalystFinding:
 # ---------------------------------------------------------------------------
 
 @app.reasoner(path="/research", tags=["committee"])
-async def plan_research(query: str) -> DualResearchReport:
+async def plan_research(query: str) -> FullResearchReport:
     """
     The Manager: entry point for direct API queries (POST /research).
     Decomposes the query into a ResearchPlan, dispatches Analyst and Contrarian
@@ -265,7 +269,7 @@ async def plan_research(query: str) -> DualResearchReport:
         query: Free-form user query, e.g. "Should I invest in AAPL?"
 
     Returns:
-        DualResearchReport with short_term and long_term ResearchReports.
+        FullResearchReport with short_term, long_term, and options analysis.
     """
     app.note(
         f"[manager] Received research query: {query!r}",
@@ -443,13 +447,63 @@ async def plan_research(query: str) -> DualResearchReport:
         )
         return report
 
-    short_report, long_report = await asyncio.gather(run_editor_short(), run_editor_long())
+    # Fetch options strategist data in parallel with editor data
+    technicals, options_chain, fundamentals = await asyncio.gather(
+        get_technical_indicators(plan.ticker),
+        get_options_chain(plan.ticker),
+        get_fundamental_deep_dive(plan.ticker),
+    )
+
+    async def run_options_strategist() -> OptionsAnalysis:
+        report: OptionsAnalysis = await app.ai(
+            system=(
+                "You are a senior options strategist at a quantitative trading desk. "
+                "Combine technical indicators and fundamental analysis to recommend "
+                "2-4 options strategies from: long_call, debit_spread, cash_secured_put, "
+                "straddle, strangle. For each strategy:\n"
+                "- Specify exact legs (strike, expiry, BUY/SELL)\n"
+                "- Calculate max profit, max loss, breakeven\n"
+                "- Provide net debit/credit\n"
+                "- Explain rationale using technicals + fundamentals\n\n"
+                "Use the technical data (SMA, EMA, RSI, MACD, Bollinger Bands, ATR) to "
+                "determine directional bias and volatility regime. Use fundamental data "
+                "(moat, floor/ceiling price, FCF yield) to validate the thesis.\n"
+                "If IV is high, prefer credit strategies (cash_secured_put, strangle sell side). "
+                "If IV is low, prefer debit strategies (long_call, debit_spread). "
+                "For uncertain outlook, recommend straddle or strangle."
+            ),
+            user=(
+                f"Ticker: {plan.ticker} ({plan.company_name})\n\n"
+                f"=== TECHNICAL INDICATORS ===\n{_json(technicals)}\n\n"
+                f"=== OPTIONS CHAIN ===\n{_json(options_chain)}\n\n"
+                f"=== FUNDAMENTAL DEEP DIVE ===\n{_json(fundamentals)}\n\n"
+                f"=== ANALYST FINDING (BULL) ===\n{_json(analyst_finding)}\n\n"
+                f"=== RISK ASSESSMENT (BEAR) ===\n{_json(risk_assessment)}\n\n"
+                "Provide a complete OptionsAnalysis with 2-4 ranked strategies."
+            ),
+            schema=OptionsAnalysis,
+        )
+        app.note(
+            f"[options] {len(report.strategies)} strategies for {plan.ticker} "
+            f"(technical: {report.technical_bias}, fundamental: {report.fundamental_bias})",
+            tags=["options", plan.ticker],
+        )
+        return report
+
+    short_report, long_report, options_analysis = await asyncio.gather(
+        run_editor_short(), run_editor_long(), run_options_strategist()
+    )
 
     app.note(
         f"[manager] Research complete for {plan.ticker}. "
         f"Short: {short_report.verdict} ({short_report.confidence}%) | "
-        f"Long: {long_report.verdict} ({long_report.confidence}%)",
+        f"Long: {long_report.verdict} ({long_report.confidence}%) | "
+        f"Options: {len(options_analysis.strategies)} strategies",
         tags=["manager", "complete", plan.ticker],
     )
 
-    return DualResearchReport(short_term=short_report, long_term=long_report)
+    return FullResearchReport(
+        short_term=short_report,
+        long_term=long_report,
+        options=options_analysis,
+    )

@@ -75,6 +75,21 @@ async def validate_ticker(ticker: str) -> dict:
         exchange = info.get("exchange") or info.get("fullExchangeName", "")
 
         if not price:
+            try:
+                fi = t.fast_info
+                price = fi.get("lastPrice") if hasattr(fi, "get") else getattr(fi, "last_price", None)
+            except Exception:
+                pass
+
+        if not price:
+            try:
+                hist = t.history(period="5d")
+                if not hist.empty:
+                    price = float(hist["Close"].iloc[-1])
+            except Exception:
+                pass
+
+        if not price:
             name = info.get("longName") or info.get("shortName") or ticker
             return {
                 "valid": False,
@@ -472,19 +487,31 @@ async def get_options_chain(ticker: str, weeks_out: int = 6) -> dict:
             except Exception:
                 continue
 
+            def _safe_int(val):
+                import math
+                if val is None or (isinstance(val, float) and math.isnan(val)):
+                    return 0
+                return int(val)
+
+            def _safe_float(val, default=0.0):
+                import math
+                if val is None or (isinstance(val, float) and math.isnan(val)):
+                    return default
+                return float(val)
+
             def _parse_chain(df, side):
                 if df is None or df.empty:
                     return []
                 records = []
                 for _, row in df.iterrows():
                     records.append({
-                        "strike": float(row.get("strike", 0)),
-                        "lastPrice": float(row.get("lastPrice", 0)),
-                        "bid": float(row.get("bid", 0)),
-                        "ask": float(row.get("ask", 0)),
-                        "volume": int(row.get("volume", 0) or 0),
-                        "openInterest": int(row.get("openInterest", 0) or 0),
-                        "impliedVolatility": round(float(row.get("impliedVolatility", 0) or 0), 4),
+                        "strike": _safe_float(row.get("strike")),
+                        "lastPrice": _safe_float(row.get("lastPrice")),
+                        "bid": _safe_float(row.get("bid")),
+                        "ask": _safe_float(row.get("ask")),
+                        "volume": _safe_int(row.get("volume")),
+                        "openInterest": _safe_int(row.get("openInterest")),
+                        "impliedVolatility": round(_safe_float(row.get("impliedVolatility")), 4),
                         "inTheMoney": bool(row.get("inTheMoney", False)),
                         "side": side,
                     })
