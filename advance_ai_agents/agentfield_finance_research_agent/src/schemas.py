@@ -115,6 +115,54 @@ class ResearchReport(BaseModel):
     )
 
 
+class OptionsStrategy(BaseModel):
+    """A single options strategy recommendation."""
+
+    strategy_name: str = Field(
+        description="Strategy type: 'long_call', 'debit_spread', 'cash_secured_put', 'straddle', 'strangle'"
+    )
+    outlook: Literal["bullish", "bearish", "neutral", "volatile"] = Field(
+        description="Market outlook this strategy profits from"
+    )
+    legs: list[str] = Field(
+        description="Each leg described as 'BUY/SELL CALL/PUT @ $strike exp YYYY-MM-DD', e.g. 'BUY CALL @ $150 exp 2025-02-21'"
+    )
+    max_profit: str = Field(description="Maximum profit scenario with dollar amount or 'unlimited'")
+    max_loss: str = Field(description="Maximum loss scenario with dollar amount")
+    breakeven: str = Field(description="Breakeven price point(s)")
+    net_debit_or_credit: str = Field(description="Net cost to enter, e.g. '$3.50 debit' or '$2.10 credit'")
+    rationale: str = Field(description="Why this strategy fits the current technical and fundamental setup (100-200 words)")
+    confidence: int = Field(ge=0, le=100, description="Confidence in this strategy (0-100)")
+
+
+class OptionsAnalysis(BaseModel):
+    """The Options Strategist's complete analysis output."""
+
+    reasoning_steps: list[str] = Field(
+        description="Step-by-step reasoning: how technicals and fundamentals informed strategy selection"
+    )
+    ticker: str
+    current_price: float = Field(description="Current stock price")
+    iv_assessment: str = Field(
+        description="Assessment of current implied volatility: high/normal/low relative to historical"
+    )
+    technical_bias: Literal["bullish", "bearish", "neutral"] = Field(
+        description="Overall bias from technical indicators"
+    )
+    fundamental_bias: Literal["bullish", "bearish", "neutral"] = Field(
+        description="Overall bias from fundamental analysis"
+    )
+    moat_summary: str = Field(description="One-line moat assessment")
+    floor_price: float | None = Field(description="Book-value-based floor price")
+    ceiling_price: float | None = Field(description="Growth-based ceiling price")
+    strategies: list[OptionsStrategy] = Field(
+        description="2-4 recommended options strategies ranked by confidence"
+    )
+    risk_warnings: list[str] = Field(
+        description="Key risks specific to these options positions"
+    )
+
+
 class DualResearchReport(BaseModel):
     """Combined output of the two parallel editors (short-term + long-term)."""
 
@@ -123,4 +171,19 @@ class DualResearchReport(BaseModel):
     )
     long_term: ResearchReport = Field(
         description="Investment outlook for the next 1–5 years"
+    )
+
+
+class FullResearchReport(BaseModel):
+    """Complete output including equity research and options strategies."""
+
+    short_term: ResearchReport = Field(
+        description="Investment outlook for the next 1–6 months"
+    )
+    long_term: ResearchReport = Field(
+        description="Investment outlook for the next 1–5 years"
+    )
+    options: OptionsAnalysis | None = Field(
+        default=None,
+        description="Options strategy recommendations based on technical + fundamental analysis"
     )

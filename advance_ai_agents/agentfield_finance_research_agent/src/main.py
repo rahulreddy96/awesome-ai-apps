@@ -40,8 +40,8 @@ import src.stream    # noqa: F401, E402 — SSE endpoints + UI serving
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8080))
     print(f"🔬 Argus Research Agent starting on http://localhost:{port}")
-    print("📈 5-Agent Investment Committee:")
-    print(f"   POST http://localhost:{port}/research               ← Full pipeline (all 5 agents)")
+    print("📈 6-Agent Investment Committee (with Options Strategist):")
+    print(f"   POST http://localhost:{port}/research               ← Full pipeline (all 6 agents)")
     print(f"   POST http://localhost:{port}/research/analyst       ← Bull case only")
     print(f"   POST http://localhost:{port}/research/contrarian    ← Bear case only")
     print(f"   POST http://localhost:{port}/research/stream/start  ← SSE streaming (used by UI)")
